@@ -1,0 +1,310 @@
+---
+title: "Resolução da lista 7"
+author: "Gabriel Menetryer, Gabriela Lopes e Tiago Neves"
+date: "2024-06-25"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Parte 1
+
+### Questão 1.
+
+Escolha duas variáveis qualitativas e faça um gráfico de barras que permita avaliar a associação entre elas.
+
+***Resolução***
+
+```{r, fig.width=14, fig.height=10, fig.align='center'}
+library(ggplot2)
+library(dplyr)
+library(vcd)
+library(corrplot)
+
+caminho_arquivo <- "euro2024_players.csv"
+data_frame <- read.csv(caminho_arquivo, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(data_frame)
+str(data_frame)
+
+
+
+# Eliminando valores vazios da variável Foot
+data_frame$Foot[data_frame$Foot == "" | data_frame$Foot == "-"] <- NA
+data_clean <- na.omit(data_frame)
+
+# Contar as proporções de cada categoria
+data_clean_summary <- data_clean %>%
+  group_by(Country, Foot) %>%
+  summarise(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Criar gráfico de barras empilhadas para as variáveis "Country" e "Foot"
+
+ggplot(data_clean_summary, aes(x = Country, y = percentage, fill = Foot)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("#009B9E", "#4cbb4e", "#f44336"), 
+                    labels = c("both" = "Ambos", "left" = "Esquerdo", "right" = "Direito")) +
+  labs(title = "Gráfico de Barras Empilhadas: País x Pé Dominante",
+       x = "País",
+       y = "Porcentagem (%)",
+       fill = "Pé Dominante") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5), 
+            size = 3, color = "white")
+
+
+```
+**Comentários**:
+
+Na maioria dos países, a maioria dos jogadores possui o pé direito como dominante. Destaca-se que as barras vermelhas, em termos de altura, são significativamente maiores do que as outras cores, indicando que a porcentagem de jogadores destros varia de aproximadamente 53,8% a 80,8%. Os Países Baixos (netherlands) lideram com 80,8%, seguidos pela Eslováquia (slovakia) com 76,9%, demonstrando uma elevada predominância de jogadores com pé direito dominate.
+
+É interessante notar que há uma parcela considerável de jogadores com o pé esquerdo como dominante. Por exemplo, a Geórgia apresenta a menor porcentagem de jogadores destros (57,7%), com uma representação mais expressiva de jogadores com o pé esquerdo dominante (30,8%).
+
+Outro fato interessante é que 7 países dos 24 (quase 30% do total) não apresentam jogadores ambi-destros (onde não há distinção para a dominância do pé), ou seja, podemos inferir que aproxidamente 2/3 dos jogadores são ambi-destros. 
+
+Por fim, a categoria de jogadores que utilizam ambos os pés é a menos frequente. Alguns países, como a Áustria (16%) e a Polônia (Polônia) com 14,8%, registram uma proporção relativamente superior de jogadores ambidestros.
+
+\
+
+### Questão 2.
+
+Escolha duas variáveis qualitativas e calcule as possíveis medidas de associação entre elas (C, C\*, phi e V de Cramér).
+
+***Resolução***
+
+```{r, fig.width=4, fig.height=4, fig.align='center'}
+table <- table(data_clean$Foot, data_clean$Country)
+# Calculando C
+assoc_stats <- assocstats(table)
+C <- assoc_stats$contingency
+
+# Calculando C*
+C_star <- C / sqrt(1 + C^2)
+
+# Calculando phi
+phi <- sqrt(chisq.test(table)$statistic / sum(table))
+
+# Calculando V de Cramér
+chisq_result <- chisq.test(table)
+chi_square <- chisq_result$statistic
+n <- sum(table)
+r <- nrow(table)
+c <- ncol(table)
+
+V_cramer <- sqrt(chi_square / (n * min(r - 1, c -1)))
+
+
+# Exibindo resultados
+cat("C:", C, "\n")
+cat("C*:", C_star, "\n")
+cat("Phi:", phi, "\n")
+cat("V de Cramér:", V_cramer, "\n")
+
+```
+**Comentários**:
+Obtivemos:
+
+O valor de C = 0.258
+
+O valor de C* = 0.249
+
+O valor de Phi = 0.267
+
+O valor de V de Cramér = 0.188
+
+Sabendo que os valores de C e C* estão mais próximos de 0, podemos inefrir que não haja uma associação significativa entre as variáveis "foot" e "country", visto que valores mais altos indicam uma maior associação (e =1, uma associação perfeita). Já pelo valor de Phi, tiramos o raciocínio parecido, uma vez que valores próximos de 0 indicam pouca ou nenhuma associação, enquanto valores mais próximos de -1 ou 1 indicam uma associação mais forte. O resultado de V de Cramér, por sua vez, nos indica que as variáveis possivelmente são independentes, já que o valor foi próximo de 0 (enquanto um valor mais próximo de 1 indicaria uma associação forte). Ou seja, a partir desses resultados, podemos concluir que a associação entre "foot" e "country" é baixa, quase que tornando as variáveis independentes, mas, ainda assim, é capaz que haja uma pequena e singela relação (dado que os valores são próximos à 0, mas não iguais).
+
+\
+
+
+### Questão 3.
+
+Escolha três variáveis quantitativas e faça dois gráficos da matriz de correlação entre estas
+variáveis. No primeiro gráfico utilize o coefiente de correlação de Pearson e no segundo utilize o coeficiente de
+correlação de Spearman.
+
+***Resolução***
+```{r, fig.width=4, fig.height=4, fig.align='center'}
+
+# Fazendo matriz de correlação entre as variáveis "age", "height" e "caps" utilizando o método de pearson
+matriz_pearson <- cor(data_clean[c(3, 5, 7)], method = "pearson")
+corrplot(matriz_pearson, type = "upper", method = "color")
+
+# Fazendo matriz de correlação entre as variáveis "age", "height" e "caps" utilizando o método de spearman.
+
+matriz_spearman <- cor(data_clean[c(3, 5, 7)], method = "spearman")
+corrplot(matriz_spearman, bg = "White", addCoef.col = "black", type = "full")
+
+```
+**Comentários**:
+
+Sabemos que as correlações de Pearson e Spearman são usadas para medir a relação entre duas variáveis. Embora ambas estudem essa correlação, elas possuem diferenças importantes e devem ser utilizadas em contextos ligeiramente diferentes.
+
+Em ambos os gráficos percebemos, o que é, de certa forma, óbvio, uma correlação linear perfeita positiva para os quadrantes representando as ligações AgexAge, HeightxHeight e CapsxCaps (o que já era intuitivo). Os valores negativos (de -1 a 0) representam uma correlação linear negativa, enquanto os valores positivos (de 0 a 1) representam uma correlação linear positiva; além disso, quanto mais próximo de 1 ou -1, mais forte é a correlação.
+
+A correlação de Pearson mede a força e a direção da relação linear entre duas variáveis contínuas, enquanto a correlação de Spearman mede a força e a direção da associação monotônica entre duas variáveis.
+
+A partir da análise dos gráficos 1 e 2, podemos inferir que as variáveis Idade e Altura apresentam uma correlação positiva, ou seja, conforme a idade aumenta, a altura também tenderia a aumentar, mas essa relação não é tão expressiva (valor da correlação se aproxima mais de 0 que de 1). Quanto à Idade e Caps, percebemos uma correlação positiva mais forte, ou seja, é bem provável que à medida que a idade aumente, aumente o caps. Por fim, Altura e Caps apresentam uma correlação negativa, ou seja, conforme uma aumenta, a outra diminui; então, poderíamos dizer que à medida que aumenta a idade, o caps diminui, mesmo que não seja tão expressiva tal correlação (isso signica que não temos certeza que uma variável interfira na mudança da outra). 
+
+\
+
+### Questão 4.
+
+Escolha duas variáveis quantitativas e faça o diagrama de dispersão entre elas.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+
+library(corrplot)
+
+# Fazendo o diagrama de dispersão para as variáveis "market_value" e "goals"
+
+plot(data_clean$MarketValue, data_clean$Goals,
+     main = "Valor no Mercado x Gols", xlab = "Valor de Mercado", ylab = "Gols", pch = 19, col = "darkblue")
+
+
+```
+**Comentários**:
+
+Em um gráfico de dispersão, os chamados clusters (que são os agrupamentos) nos sugerem que existe um subconjunto de dados com características semelhantes. Pelo gráfico 1, antes de aplicar o log, poderíamos inferir que existe um grupo grande de atletas com idade inferiores à 20 que estão recebendo os menores valores de mercado (valores mais baixos de ambas as variáveis). Entretanto, existem também outliers (pontos isolados) que estão separados dos demais e desviam significativamente dos outros pontos, podendo indicar variabilidade extrema. No caso de estudo, os outliers indicam jogadores com idades inferiores à 20 sendo cotados com maiores valores de mercado, o que poderia nos levar a pensar em jogadores revelações, ou atletas estrelas, que são ótimos praticantes do esporte mesmo com idade inexperiente. Outra coisa imporante de analisar, é que não percemos muito atletas de idades mais avançadas recebendo maiores valores de mercado, o que, de certa forma, faz sentido, já que o rendimento tende a cair à medida que a idade de um atleta aumenta. Então, pelo gráfico, podemos inferir que a grande parte dos atletas possuem menos de 20 anos e a maior parte da sua concentração de valor de mercado está próxima do menor intervalo dos valores, entretanto, existe um número considerável de outliers que, nessa mesma faixa etária, apresentam um maior valor de mercado. 
+
+\
+
+
+# Parte 2
+
+### Questão 1
+
+Usando o botão import Dataset do RStudio, importe para a planilha Indices. Utilizando a função select, selecione apenas as variáveis: id, Municipio, Pontuação, UF, População2019 e todas as
+pontuações ODS. Utilize a função contains.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+data_excel <- read_excel("Base de Dados.xlsx", 
+    sheet = "Indice")
+View(data_excel)
+
+# Selecionar as colunas id, Municipio, Pontuação, UF, População2019 e todas as pontuações ODS
+
+selected_data <- data_excel %>%
+  select(id, Município, Pontuação, UF, População_2019, contains("Pontuação ODS"), contains("Pontuação Regional ODS"))
+
+# Ver os primeiros registros do dataframe selecionado
+head(selected_data)
+
+```
+### Questão 2. 
+
+Utilizando a função select, exclua as colunas com a palavra regional no nome do banco de dados anterior.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+data_excel <- read_excel("Base de Dados.xlsx", 
+    sheet = "Indice")
+View(data_excel)
+
+# Selecionar apenas colunas com a palavra Regional
+
+selected_ <- data_excel %>%
+  select(-starts_with("Regional"))
+
+head(selected_)
+
+```
+
+### Questão 3. 
+
+Renomeie as colunas com nome Pontuação ODS número para ODS numero. Como são muitas variáveis, faça apenas para as 5 primeiras variárveis ODS.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+data_excel <- read_excel("Base de Dados.xlsx", 
+    sheet = "Indice")
+View(data_excel)
+
+# Renomeadndo as 5 primeiras variaveis ODS
+data_ren <- data_excel %>%
+  rename(`ODS1` = `Pontuação ODS1`, `ODS2` = `Pontuação ODS2`, `ODS3` = `Pontuação ODS3`, `ODS4` = `Pontuação ODS4`, `ODS5` = `Pontuação ODS5`)
+
+head(data_ren)
+
+
+```
+
+### Questão 4
+
+Utilize a função filter para filtrar os dados anteriores obtendo os dados apenas de Minas Gerais.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+data_excel <- read_excel("Base de Dados.xlsx", 
+    sheet = "Indice")
+View(data_excel)
+
+filtro_dados <- data_excel %>%
+  filter(UF %in% c("MG"))
+
+head(filtro_dados)
+
+```
+
+### Questão 5
+
+Usando a função mutate, acrescente uma coluna ao banco de dados com o resultado de ODS1 + ODS2 + ODS3
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+data_excel <- read_excel("Base de Dados.xlsx", 
+    sheet = "Indice")
+View(data_excel)
+
+# Calcular a soma de ODS1, ODS2 e ODS3 e adicionar como uma nova coluna
+soma_dados <- data_ren %>%
+  mutate(soma = `ODS1` + `ODS2` + `ODS3`) %>%
+  select(soma, starts_with("ODS"))
+
+# Ver os primeiros registros do dataframe com a soma e as colunas ODS
+head(soma_dados)
+
+```
+
+### Questão 6
+
+Utilizando o banco de dados da questão 3, construa um banco de dados com a pontuação média por estado e ordene em ordem decrescente.
+
+```{r, fig.width=6, fig.height=6, fig.align='center'}
+
+# Carregar pacotes
+library(readxl)
+library(dplyr)
+
+
+# Calcular a pontuação média por estado
+pontuacao_media_por_estado <- data_ren %>%
+  group_by(UF) %>%
+  summarise(Media_Pontuacao = mean(Pontuação, na.rm = TRUE)) %>%
+  arrange(desc(Media_Pontuacao))
+
+# Visualizar o dataframe com a pontuação média por estado ordenada
+head(pontuacao_media_por_estado)
+
+```
